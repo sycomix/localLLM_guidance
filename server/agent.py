@@ -72,7 +72,7 @@ class CustomAgentGuidance:
         result_start = prompt_start(question=query, valid_answers=valid_answers)
 
         result_mid = result_start
-        
+
         for _ in range(self.num_iter - 1):
             if result_mid['answer'] == 'Final Answer':
                 break
@@ -82,9 +82,13 @@ class CustomAgentGuidance:
         if result_mid['answer'] != 'Final Answer':
             history = result_mid.__str__()
             prompt_mid = self.guidance(prompt_final_template)
-            result_final = prompt_mid(history=history, do_tool=self.do_tool, valid_answers=['Final Answer'], valid_tools=valid_tools)
+            return prompt_mid(
+                history=history,
+                do_tool=self.do_tool,
+                valid_answers=['Final Answer'],
+                valid_tools=valid_tools,
+            )
         else:
             history = result_mid.__str__()
             prompt_mid = self.guidance(history + "{{gen 'fn' stop='\\n'}}")
-            result_final = prompt_mid()
-        return result_final
+            return prompt_mid()

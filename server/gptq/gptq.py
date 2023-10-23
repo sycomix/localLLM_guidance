@@ -35,7 +35,7 @@ class GPTQ:
         if len(inp.shape) == 2:
             inp = inp.unsqueeze(0)
         tmp = inp.shape[0]
-        if isinstance(self.layer, nn.Linear) or isinstance(self.layer, transformers.Conv1D):
+        if isinstance(self.layer, (nn.Linear, transformers.Conv1D)):
             if len(inp.shape) == 3:
                 inp = inp.reshape((-1, inp.shape[-1]))
             inp = inp.t()
@@ -76,7 +76,7 @@ class GPTQ:
         dead = torch.diag(H) == 0
         H[dead, dead] = 1
         W[:, dead] = 0
-        
+
         if actorder:
             perm = torch.argsort(torch.diag(H), descending=True)
             W = W[:, perm]
@@ -92,7 +92,7 @@ class GPTQ:
         H = torch.cholesky_inverse(H)
         H = torch.linalg.cholesky(H, upper=True)
         Hinv = H
-        
+
         scale = []
         zero = []
         now_idx = 1
@@ -114,7 +114,7 @@ class GPTQ:
                 if groupsize != -1:
                     if (i1 + i) % groupsize == 0:
                         self.quantizer.find_params(W[:, (i1 + i):(i1 + i + groupsize)], weight=True)
-                    
+
                     if ((i1 + i) // groupsize) - now_idx == -1:
                         scale.append(self.quantizer.scale)
                         zero.append(self.quantizer.zero)
@@ -144,7 +144,7 @@ class GPTQ:
         torch.cuda.synchronize()
         print('time %.2f' % (time.time() - tick))
         print('error', torch.sum(Losses).item())
-        
+
         if actorder:
             invperm = torch.argsort(perm)
             Q = Q[:, invperm]
@@ -154,8 +154,8 @@ class GPTQ:
         self.layer.weight.data = Q.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
         if DEBUG:
             print(torch.sum((self.layer(self.inp1) - self.out1) ** 2))
-            
-        if scale == []:
+
+        if not scale:
             scale.append(self.quantizer.scale)
             zero.append(self.quantizer.zero)
         scale = torch.cat(scale,dim=1)

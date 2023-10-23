@@ -118,9 +118,7 @@ class Quantizer(nn.Module):
             self.zero = self.zero.unsqueeze(0)
 
     def quantize(self, x):
-        if self.ready():
-            return quantize(x, self.scale, self.zero, self.maxq)
-        return x
+        return quantize(x, self.scale, self.zero, self.maxq) if self.ready() else x
 
     def enabled(self):
         return self.maxq > 0
@@ -161,7 +159,7 @@ class QuantLinear(nn.Module):
         self.kernel_switch_threshold = kernel_switch_threshold
         if isinstance(self.kernel_switch_threshold, bool):
             self.kernel_switch_threshold = 128 if self.kernel_switch_threshold else None
-        if not self.kernel_switch_threshold is None:
+        if self.kernel_switch_threshold is not None:
             # Buffers for bit shifting weight unpacking
             if self.bits == 2:
                 self.register_buffer(
